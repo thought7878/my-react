@@ -58,4 +58,16 @@ function createElement(type, config, ...children) {
   };
 }
 
-export default { createElement };
+class Component {
+  constructor(props) {
+    this.props = props;
+  }
+
+  static isReactComponent = true;
+
+  setState(partialState) {
+    classComponentUpdate(this, partialState);
+  }
+}
+
+export default { createElement, Component };

@@ -138,9 +138,9 @@ export function createHostRootFiber() {
 }
 
 /**
- * React每次更新时，都会调用这个函数，根据老的Fiber节点，创建工作节点
+ * React每次更新时，都会调用这个函数，根据老的Fiber节点，创建工作树的新节点
  *
- * 创建一个用于工作的 Fiber 节点（workInProgress Fiber）。
+ * 创建一个用于工作树的 Fiber 节点（workInProgress Fiber）。
  * workInProgress Fiber 是当前正在构建的新 Fiber 树中的节点，与当前渲染的 Fiber 树（current Fiber 树）相对应。
  * @param {FiberNode} current - 当前渲染的 Fiber 树中的对应节点（老节点）。
  * @param {Object} pendingProps - 新的待处理属性。

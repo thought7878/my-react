@@ -13,6 +13,7 @@ import {
   HostRoot,
   HostText,
 } from './constants';
+import { listenToAllEvents } from './listenToAllEvents.js';
 
 const hostComponent = (
   <h1 style={{ color: 'orange' }}>
@@ -24,7 +25,22 @@ function AppFunctionComponent() {
 }
 const AppClassComponent = class extends React.Component {
   render() {
-    return <h1 style={{ color: 'blue' }}>Class Component</h1>;
+    return (
+      <div
+        style={{ color: 'blue' }}
+        onClick={() => {
+          console.log('div clicked');
+        }}
+      >
+        <h2
+          onClick={() => {
+            console.log('h2 clicked');
+          }}
+        >
+          我是h2
+        </h2>
+      </div>
+    );
   }
 };
 
@@ -47,6 +63,9 @@ let workInProgress = createWorkInProgress(hostRootFiber, {
   // children: <AppFunctionComponent />,
   children: <AppClassComponent />,
 });
+
+// NOTE: 监听所有事件
+listenToAllEvents(root.container);
 
 // 模拟ReactDOM.render(element, container)
 function render() {
@@ -74,6 +93,7 @@ function commitRoot() {
 render();
 
 /**
+ * 渲染阶段，构建 Fiber 树。
  * 同步渲染根节点的函数。
  * 该函数会遍历 fiber 树，依次执行 beginWork 和 completeWork 操作，完成整个渲染流程。
  */
@@ -186,7 +206,7 @@ function beginWork(current, workInProgress) {
     workInProgress.child = null;
     return workInProgress.child;
   }
-  // NOTE: 根据 nextChildren React 元素创建一个新的 Fiber 节点
+  // NOTE: 根据 nextChildren React 元素创建一个新的 Fiber 节点。完善节点之间的关系。
   const childFiber = createFiberFromElement(nextChildren);
   childFiber.return = workInProgress;
   workInProgress.child = childFiber;

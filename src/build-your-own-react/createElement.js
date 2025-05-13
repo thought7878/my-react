@@ -27,8 +27,32 @@ function createTextElement(text) {
   };
 }
 
+function render(element, container) {
+  // 使用元素类型创建 DOM 节点
+  // 处理文本元素，如果元素类型是 TEXT_ELEMENT ，我们会创建一个文本节点而不是普通节点。
+  const dom =
+    element.type == 'TEXT_ELEMENT'
+      ? document.createTextNode('')
+      : document.createElement(element.type);
+
+  // 将元素属性分配给节点
+  const isProperty = (key) => key !== 'children';
+  Object.keys(element.props)
+    .filter(isProperty)
+    .forEach((name) => {
+      dom[name] = element.props[name];
+    });
+
+  // 递归地对每个子元素做同样的处理
+  element.props.children.forEach((child) => render(child, dom));
+
+  // 将新节点追加到容器中
+  container.appendChild(dom);
+}
+
 const Didact = {
   createElement,
+  render,
 };
 
 /**
@@ -54,4 +78,4 @@ const element = Didact.createElement(
  */
 
 const container = document.getElementById('root');
-ReactDOM.render(element, container);
+Didact.render(element, container);

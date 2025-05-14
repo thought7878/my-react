@@ -46,17 +46,38 @@ function createDom(fiber) {
   return dom;
 }
 
+function commitRoot() {
+  commitWork(wipRoot.child);
+  wipRoot = null;
+}
+
+// 递归地将所有节点添加到 dom 中
+// 替代 performUnitOfWork 函数的部分作用：将当前 Fiber 节点的 DOM 元素添加到父 Fiber 节点的 DOM 元素中
+function commitWork(fiber) {
+  if (!fiber) {
+    return;
+  }
+  const domParent = fiber.parent.dom;
+  domParent.appendChild(fiber.dom);
+  commitWork(fiber.child);
+  commitWork(fiber.sibling);
+}
+
 function render(element, container) {
-  // 将 nextUnitOfWork 设置为 fiber 树的根。
-  nextUnitOfWork = {
+  wipRoot = {
     dom: container,
     props: {
       children: [element],
     },
   };
+
+  // 将 nextUnitOfWork 设置为 fiber 树的根。
+  nextUnitOfWork = wipRoot;
 }
 
 let nextUnitOfWork = null;
+// 跟踪fiber树的根，work in progress root
+let wipRoot = null;
 
 function workLoop(deadline) {
   let shouldYield = false;
@@ -64,6 +85,12 @@ function workLoop(deadline) {
     nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
     shouldYield = deadline.timeRemaining() < 1;
   }
+
+  // 一旦我们完成所有工作（不存在下一个工作单元），将整个 fiber 树提交到 DOM。
+  if (!nextUnitOfWork && wipRoot) {
+    commitRoot();
+  }
+
   requestIdleCallback(workLoop);
 }
 
@@ -91,10 +118,15 @@ function performUnitOfWork(fiber) {
     fiber.dom = createDom(fiber);
   }
 
+  /* 
+  // 这里有一个问题：
+  // 每次我们处理一个元素时，我们都在向 DOM 添加一个新的节点。
+  // 记住，浏览器可能会在我们完成渲染整个树之前中断我们的工作。
+  // 在这种情况下，用户会看到一个不完整的 UI。我们不希望这样。
   if (fiber.parent) {
-    // 将当前 Fiber 节点的 DOM 元素添加到父节点的 DOM 元素中
+    // 将当前 Fiber 节点的 DOM 元素添加到父 Fiber 节点的 DOM 元素中
     fiber.parent.dom.appendChild(fiber.dom);
-  }
+  } */
 
   // NOTE: 为当前的fiber节点的每个子 react element，创建新的 fiber；将其添加到 fiber 树中，建立fiber节点之间的关系
   const elements = fiber.props.children;

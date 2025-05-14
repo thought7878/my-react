@@ -74,7 +74,10 @@ requestIdleCallback(workLoop);
 /**
  * 工作单元就是Fiber 节点。
  * 执行一个工作单元，即处理当前 Fiber 节点，返回下一个需要处理的工作单元。
- * 该函数负责，创建 DOM 元素、创建 Fiber 节点并建立节点间的关系，以及确定下一个工作单元。
+ * 该函数负责：
+ * - 创建 DOM 元素，
+ * - 创建 Fiber 节点并建立节点间的关系，
+ * - 确定下一个工作单元，并返回。
  * @param {Object} fiber - 当前需要处理的 Fiber 节点。
  * @returns {Object|null} - 下一个需要处理的 Fiber 节点，如果没有则返回 null。
  */

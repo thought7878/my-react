@@ -71,8 +71,15 @@ function workLoop(deadline) {
 // 当浏览器准备好时，它会调用我们的 workLoop ，然后我们将开始处理根节点。
 requestIdleCallback(workLoop);
 
+/**
+ * 工作单元就是Fiber 节点。
+ * 执行一个工作单元，即处理当前 Fiber 节点，返回下一个需要处理的工作单元。
+ * 该函数负责，创建 DOM 元素、创建 Fiber 节点并建立节点间的关系，以及确定下一个工作单元。
+ * @param {Object} fiber - 当前需要处理的 Fiber 节点。
+ * @returns {Object|null} - 下一个需要处理的 Fiber 节点，如果没有则返回 null。
+ */
 function performUnitOfWork(fiber) {
-  // NOTE: 创建一个新的节点并将其添加到 DOM 中
+  // NOTE: 创建一个新的DOM，并将其添加到父 DOM 中
   if (!fiber.dom) {
     // 为 Fiber 节点创建对应的 DOM 元素
     fiber.dom = createDom(fiber);
@@ -83,7 +90,7 @@ function performUnitOfWork(fiber) {
     fiber.parent.dom.appendChild(fiber.dom);
   }
 
-  // NOTE: 处理子节点。为每个子react element，创建一个新的 fiber。
+  // NOTE: 为每个子 react element，创建新的 fiber；将其添加到 fiber 树中，建立fiber节点之间的关系
   const elements = fiber.props.children;
   let index = 0;
   let prevSibling = null;
@@ -98,12 +105,12 @@ function performUnitOfWork(fiber) {
       dom: null,
     };
 
-    // 建立子节点之间的关系
+    // 将其添加到 fiber 树中，建立fiber节点之间的关系（父子、兄弟）
     if (index === 0) {
-      // 如果当前节点是第一个子节点，将其设置为父节点的子节点
+      // 父子关系：如果当前节点是第一个子节点，将其设置为父节点的子节点
       fiber.child = newFiber;
     } else {
-      // 如果当前节点不是第一个子节点，将其设置为前一个兄弟节点的兄弟节点
+      // 兄弟关系：如果当前节点不是第一个子节点，将其设置为前一个兄弟节点的兄弟节点
       prevSibling.sibling = newFiber;
     }
 
@@ -111,8 +118,8 @@ function performUnitOfWork(fiber) {
     index++;
   }
 
-  // NOTE: 处理子节点。返回下一个需要处理的子节点。
-  // 搜索下一个工作单元。我们首先尝试子节点，然后是兄弟节点，然后是叔节点，等等。
+  // NOTE: 返回下一个需要处理的工作单元（fiber节点）。
+  // 查找下一个工作单元。我们首先尝试子节点，然后是兄弟节点，然后是叔节点，等等。
   if (fiber.child) {
     return fiber.child;
   }

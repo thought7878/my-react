@@ -27,54 +27,102 @@ function createTextElement(text) {
   };
 }
 
-function render(element, container) {
+function createDom(fiber) {
   // 使用元素类型创建 DOM 节点
   // 处理文本元素，如果元素类型是 TEXT_ELEMENT ，我们会创建一个文本节点而不是普通节点。
   const dom =
-    element.type == 'TEXT_ELEMENT'
+    fiber.type == 'TEXT_ELEMENT'
       ? document.createTextNode('')
-      : document.createElement(element.type);
+      : document.createElement(fiber.type);
 
   // 将元素属性分配给节点
   const isProperty = (key) => key !== 'children';
-  Object.keys(element.props)
+  Object.keys(fiber.props)
     .filter(isProperty)
     .forEach((name) => {
-      dom[name] = element.props[name];
+      dom[name] = fiber.props[name];
     });
 
-  /* 
-  // 递归地对每个子元素做同样的处理
-  element.props.children.forEach((child) => render(child, dom));
-  */
-  let nextUnitOfWork = null;
-  function workLoop(deadline) {
-    // 标记是否应该停止工作
-    let shouldYield = false;
-    while (nextUnitOfWork && !shouldYield) {
-      nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
-      // 检查是否还有剩余时间，如果没有，设置 shouldYield 为 true，以便在下一次循环中继续工作。
-      // 这是一个简单的时间切片实现，它允许浏览器在处理完一部分工作后，有机会处理其他任务，如响应用户输入或更新屏幕。
+  return dom;
+}
 
-      // requestIdleCallback 还给我们提供了一个截止日期参数。
-      // 我们可以用它来检查浏览器再次需要控制之前还有多少时间。
-      shouldYield = deadline.timeRemaining() < 1;
-    }
-    // 使用 requestIdleCallback 来创建一个循环。
-    // 你可以把 requestIdleCallback 看作是一个 setTimeout ，但不是由我们告诉它何时运行，
-    // 而是当主线程空闲时浏览器会运行回调。
-    requestIdleCallback(workLoop);
+function render(element, container) {
+  // 将 nextUnitOfWork 设置为 fiber 树的根。
+  nextUnitOfWork = {
+    dom: container,
+    props: {
+      children: [element],
+    },
+  };
+}
+
+let nextUnitOfWork = null;
+
+function workLoop(deadline) {
+  let shouldYield = false;
+  while (nextUnitOfWork && !shouldYield) {
+    nextUnitOfWork = performUnitOfWork(nextUnitOfWork);
+    shouldYield = deadline.timeRemaining() < 1;
   }
-  // React 不再使用 requestIdleCallback 了。现在它使用调度器包。但对于这个用例，在概念上是一样的。
   requestIdleCallback(workLoop);
-  // 执行工作单元
-  // 该函数不仅执行工作，还返回下一个工作单元
-  function performUnitOfWork(nextUnitOfWork) {
-    // TODO
+}
+
+// 浏览器空闲时调用 workLoop 函数，开始工作循环。
+// 当浏览器准备好时，它会调用我们的 workLoop ，然后我们将开始处理根节点。
+requestIdleCallback(workLoop);
+
+function performUnitOfWork(fiber) {
+  // NOTE: 创建一个新的节点并将其添加到 DOM 中
+  if (!fiber.dom) {
+    // 为 Fiber 节点创建对应的 DOM 元素
+    fiber.dom = createDom(fiber);
   }
 
-  // 将新节点追加到容器中
-  container.appendChild(dom);
+  if (fiber.parent) {
+    // 将当前 Fiber 节点的 DOM 元素添加到父节点的 DOM 元素中
+    fiber.parent.dom.appendChild(fiber.dom);
+  }
+
+  // NOTE: 处理子节点。为每个子react element，创建一个新的 fiber。
+  const elements = fiber.props.children;
+  let index = 0;
+  let prevSibling = null;
+
+  while (index < elements.length) {
+    const element = elements[index];
+
+    const newFiber = {
+      type: element.type,
+      props: element.props,
+      parent: fiber,
+      dom: null,
+    };
+
+    // 建立子节点之间的关系
+    if (index === 0) {
+      // 如果当前节点是第一个子节点，将其设置为父节点的子节点
+      fiber.child = newFiber;
+    } else {
+      // 如果当前节点不是第一个子节点，将其设置为前一个兄弟节点的兄弟节点
+      prevSibling.sibling = newFiber;
+    }
+
+    prevSibling = newFiber;
+    index++;
+  }
+
+  // NOTE: 处理子节点。返回下一个需要处理的子节点。
+  // 搜索下一个工作单元。我们首先尝试子节点，然后是兄弟节点，然后是叔节点，等等。
+  if (fiber.child) {
+    return fiber.child;
+  }
+  let nextFiber = fiber;
+  while (nextFiber) {
+    if (nextFiber.sibling) {
+      return nextFiber.sibling;
+    }
+    nextFiber = nextFiber.parent;
+  }
 }
 
 const Didact = {

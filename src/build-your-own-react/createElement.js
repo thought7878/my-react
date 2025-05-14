@@ -75,9 +75,12 @@ requestIdleCallback(workLoop);
  * 工作单元就是Fiber 节点。
  * 执行一个工作单元，即处理当前 Fiber 节点，返回下一个需要处理的工作单元。
  * 该函数负责：
- * - 创建 DOM 元素，
- * - 创建 Fiber 节点并建立节点间的关系，
- * - 确定下一个工作单元，并返回。
+ * - 创建 DOM 元素。为当前的fiber节点，创建对应的DOM元素。
+ * - 创建 Fiber 节点并建立节点间的关系。为当前的fiber节点的每个子react element，创建新的fiber节点，
+ *   并将其添加到fiber树中，建立fiber节点之间的关系（父子、兄弟）。
+ * - 确定下一个工作单元，并返回。返回下一个需要处理的工作单元（fiber节点）。
+ *   我们首先尝试子节点，然后是兄弟节点，然后是叔节点，等等。
+ *
  * @param {Object} fiber - 当前需要处理的 Fiber 节点。
  * @returns {Object|null} - 下一个需要处理的 Fiber 节点，如果没有则返回 null。
  */
@@ -93,7 +96,7 @@ function performUnitOfWork(fiber) {
     fiber.parent.dom.appendChild(fiber.dom);
   }
 
-  // NOTE: 为每个子 react element，创建新的 fiber；将其添加到 fiber 树中，建立fiber节点之间的关系
+  // NOTE: 为当前的fiber节点的每个子 react element，创建新的 fiber；将其添加到 fiber 树中，建立fiber节点之间的关系
   const elements = fiber.props.children;
   let index = 0;
   let prevSibling = null;
